@@ -1,6 +1,7 @@
 from langchain_ollama import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
-from vector import retriever
+from vector import retriever, rerank_docs
+
 
 model = OllamaLLM(model="llama3.2")
 
@@ -35,7 +36,9 @@ while True:
         print("👋 Goodbye!")
         break
 
-    docs = retriever.invoke(question)
+    initial_docs = retriever.invoke(question)
+    docs = rerank_docs(question, initial_docs, top_k=3)
+
 
     print("\n📚 Retrieved Sources:")
     for d in docs:

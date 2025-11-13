@@ -12,7 +12,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, os.pardir))
 if PROJECT_ROOT not in sys.path:
 	sys.path.insert(0, PROJECT_ROOT)
 
-from vector import retriever
+from backend.vector import retriever
 
 TEST_QUERIES = [
 	#only in TXT

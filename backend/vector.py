@@ -3,30 +3,39 @@ from pathlib import Path
 import pandas as pd
 import PyPDF2
 from langchain_core.documents import Document
-from langchain_ollama import OllamaEmbeddings
+from langchain_ollama import OllamaEmbeddings, OllamaLLM
 from langchain_chroma import Chroma
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-CSV_PATH = "rag_data.csv"
-PDF_DIR = Path("data/pdfs")
-TXT_DIR = Path("data/txts")
-DB_DIR = "./chroma_langchain_db"
+# Initialize LLM for reranking
+llm = OllamaLLM(model="phi")
+
+# Paths and constants
+BACKEND_DIR = Path(__file__).parent
+CSV_PATH = BACKEND_DIR / "rag_data.csv"
+PDF_DIR = BACKEND_DIR / "data" / "pdfs"
+TXT_DIR = BACKEND_DIR / "data" / "txts"
+DB_DIR = BACKEND_DIR / "chroma_langchain_db"
 COLLECTION_NAME = "Nishant_gakare_information"
 EMBED_MODEL = "nomic-embed-text"
 CHUNK_SIZE = 800
 CHUNK_OVERLAP = 100
 
-#HELPER: CHUNK TEXT
+# -----------------------------
+# Helper: Chunk text
+# -----------------------------
 def chunk_text(text, chunk_size=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
-    chunks = []
-    start = 0
-    length = len(text)
-    while start < length:
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start = end - overlap
-    return chunks
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=overlap,
+        separators=["\n\n", "\n", ".", "!", "?", " "],
+        length_function=len,
+    )
+    return splitter.split_text(text)
 
-#LOAD CSV DOCS
+# -----------------------------
+# Load CSV documents
+# -----------------------------
 def load_csv_docs(csv_path):
     documents = []
     if not os.path.exists(csv_path):
@@ -40,17 +49,22 @@ def load_csv_docs(csv_path):
             for i, chunk in enumerate(chunk_text(text)):
                 doc = Document(
                     page_content=chunk,
-                    metadata={"source": "csv", "topic": row["topic"], "id": str(row["id"])},
+                    metadata={
+                        "source": "csv",
+                        "file_name": row["topic"],
+                        "id": str(row["id"])
+                    },
                     id=f"csv-{row['id']}-{i}"
                 )
                 documents.append(doc)
         print(f"✅ Loaded {len(documents)} CSV chunks")
     except Exception as e:
         print(f"❌ Error reading CSV: {e}")
-
     return documents
 
-#LOAD PDF DOCS
+# -----------------------------
+# Load PDF documents
+# -----------------------------
 def load_pdf_docs(pdf_dir):
     documents = []
     if not pdf_dir.exists():
@@ -64,17 +78,21 @@ def load_pdf_docs(pdf_dir):
             for i, chunk in enumerate(chunk_text(text)):
                 doc = Document(
                     page_content=chunk,
-                    metadata={"source": str(pdf_path.name)},
+                    metadata={
+                        "source": "pdf",
+                        "file_name": pdf_path.name
+                    },
                     id=f"pdf-{pdf_path.stem}-{i}"
                 )
                 documents.append(doc)
         except Exception as e:
             print(f"❌ Failed to read {pdf_path}: {e}")
-
     print(f"✅ Loaded {len(documents)} PDF chunks")
     return documents
 
-#LOAD TXT DOCS
+# -----------------------------
+# Load TXT documents
+# -----------------------------
 def load_txt_docs(txt_dir):
     documents = []
     if not txt_dir.exists():
@@ -87,17 +105,21 @@ def load_txt_docs(txt_dir):
             for i, chunk in enumerate(chunk_text(text)):
                 doc = Document(
                     page_content=chunk,
-                    metadata={"source": str(txt_path.name)},
+                    metadata={
+                        "source": "txt",
+                        "file_name": txt_path.name
+                    },
                     id=f"txt-{txt_path.stem}-{i}"
                 )
                 documents.append(doc)
         except Exception as e:
             print(f"❌ Failed to read {txt_path}: {e}")
-
     print(f"✅ Loaded {len(documents)} TXT chunks")
     return documents
 
-# STORE AND RETRIEVER
+# -----------------------------
+# Initialize embeddings and vector store
+# -----------------------------
 print("🧠 Initializing embeddings and vector store...")
 embeddings = OllamaEmbeddings(model=EMBED_MODEL)
 vector_store = Chroma(
@@ -106,6 +128,7 @@ vector_store = Chroma(
     embedding_function=embeddings,
 )
 
+# Load all documents
 csv_docs = load_csv_docs(CSV_PATH)
 pdf_docs = load_pdf_docs(PDF_DIR)
 txt_docs = load_txt_docs(TXT_DIR)
@@ -125,10 +148,52 @@ if all_docs:
 else:
     print("⚠️ No documents found. Please check your paths and file types.")
 
-#RETRIEVER
-retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 3})
-print("🚀 Retriever ready to use!")
+# -----------------------------
+# Retriever (use MMR for diversity across sources)
+# -----------------------------
+retriever = vector_store.as_retriever(
+    search_type="mmr",
+    search_kwargs={
+        "k": 5,       # final results returned
+        "fetch_k": 20 # pool size before MMR diversification
+    }
+)
+print("🚀 Retriever (MMR) ready to use!")
 
+# -----------------------------
+# Reranker for Stage 2
+# -----------------------------
+def rerank_docs(question, docs, top_k=3):
+    """
+    Simple reranker that uses Ollama LLM to score how relevant each doc is to the question.
+    Returns top_k documents.
+    """
+    rerank_llm = OllamaLLM(model="phi")
+    scored_docs = []
+
+    for doc in docs:
+        prompt = f"""
+        Question: {question}
+        Context: {doc.page_content}
+
+        Score how relevant this context is to the question on a scale of 0 (irrelevant) to 10 (very relevant).
+        Only return the number.
+        """
+        try:
+            score_str = rerank_llm.invoke(prompt).strip()
+            score = float(score_str)
+        except:
+            score = 0
+        scored_docs.append((score, doc))
+
+    # Sort by score descending and take top_k
+    ranked = sorted(scored_docs, key=lambda x: x[0], reverse=True)
+    top_docs = [doc for _, doc in ranked[:top_k]]
+    return top_docs
+
+# -----------------------------
+# Test query if run directly
+# -----------------------------
 if __name__ == "__main__":
     query = input("\n🔍 Test query: ")
     results = retriever.invoke(query)
@@ -136,4 +201,4 @@ if __name__ == "__main__":
     for i, doc in enumerate(results, start=1):
         print(f"\n--- Result {i} ---")
         print(doc.page_content[:400])
-        print("📁 Source:", doc.metadata.get("source"))
+        print("📁 Source:", doc.metadata.get("file_name") or doc.metadata.get("source"))
