@@ -1,0 +1,54 @@
+Detailed Profile: RN
+
+Name: RN
+
+Education:
+- 2nd Year B.Tech in Data Science Engineering, St. Vincent Pallotti College of Engineering
+
+Technical Skills:
+- Python, C, C++, FastAPI, React, Tailwind CSS, TypeScript, HTML, CSS, Javascript
+
+Hackathon Achievements:
+- Qualified for Smart India Hackathon 2024
+- Ranked 20th out of 100 finalists in HackFest 2.0 (CMR College of Engineering, Hyderabad)
+- Participated in NASA Space Apps Challenge
+- Qualified first round in IIT Kharagpur's Data Science Hackathon
+
+Major Projects:
+1. Cashless Payment System for School Campuses
+2. Soil Test Report Analyzer
+3. PACE in Classroom
+4. AI Plant & Herb Identifier
+5. AI Health & Wellness Coach using FastAPI, Ollama, and React
+
+Ongoing Project:
+- Building a Retrieval-Augmented Generation (RAG) system using local PDFs and text data
+
+Interests:
+- AI, Web Development, Hackathons, Agentic AI, Small Language Models
+
+Extracurricular:
+- Played Hockey at the National Level
+- Active member of Nexus-DS Club
+
+Future Goals:
+- Contribute to open-source AI projects
+- Build a scalable AI-based startup
+- Master cloud deployment (AWS, GCP)
+- Participate in international hackathons
+
+Contact Info:
+- Email: rn.dev@example.com
+- GitHub: github.com/rn-dev
+- LinkedIn: linkedin.com/in/rn-d
+
+Personality:
+- Curious learner who enjoys solving real-world problems
+- Known for leadership, team coordination, and creative thinking
+- Passionate about exploring cutting-edge AI trends like RAG and Agentic Systems
+
+Additional Info:
+- Hosted a national-level hackathon 'HackRonyX 2025' at SVPCET Nagpur
+- Loves mentoring juniors in Python and project building
+- Enjoys music, photography, and exploring tech communities
+
