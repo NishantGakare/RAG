@@ -13,7 +13,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-#Request body schema
 class Query(BaseModel):
     question: str
 
@@ -24,13 +23,9 @@ def root():
 @app.post("/query")
 async def query_rag(data: Query):
     question = data.question
-
     initial_docs = retriever.invoke(question)
-
     top_docs = rerank_docs(question, initial_docs, top_k=3)
-
     context = "\n\n".join([doc.page_content for doc in top_docs])
-
     llm = OllamaLLM(model="phi")
     prompt = f"""
 You are a knowledgeable assistant.
