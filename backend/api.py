@@ -37,13 +37,11 @@ Question: {question}
 Answer the question using ONLY the context. If not in context, reply: "I don't have enough information about that yet."
 """
     answer = llm.invoke(prompt)
-
     #Collect sources
     sources = [
         doc.metadata.get("file_name") or doc.metadata.get("source", "unknown")
         for doc in top_docs
     ]
-
     return {
         "question": question,
         "answer": answer,

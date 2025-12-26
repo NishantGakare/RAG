@@ -2,9 +2,7 @@ from langchain_ollama import OllamaLLM
 from langchain_core.prompts import ChatPromptTemplate
 from vector import retriever, rerank_docs
 
-
 model = OllamaLLM(model="llama3.2")
-
 template = """
 You are a highly knowledgeable AI assistant that knows detailed information about Nishant Gakare (also called RN).
 
@@ -23,8 +21,6 @@ When you respond:
 User's Question:
 {question}
 """
-
-
 prompt = ChatPromptTemplate.from_template(template)
 chain = prompt | model
 
@@ -35,7 +31,6 @@ while True:
     if question.lower() in ["exit", "quit"]:
         print("👋 Goodbye!")
         break
-
     initial_docs = retriever.invoke(question)
     docs = rerank_docs(question, initial_docs, top_k=3)
 
@@ -45,10 +40,8 @@ while True:
         src = d.metadata.get("source", "unknown")
         title = d.metadata.get("file_name", d.metadata.get("topic", "N/A"))
         print(f" - Source: {src}, File/Topic: {title}")
-
     information = "\n\n".join([getattr(d, "page_content", str(d)) for d in docs])
 
     result = chain.invoke({"information": information, "question": question})
-
     print("\n🤖 Answer:", result, "\n")
 
